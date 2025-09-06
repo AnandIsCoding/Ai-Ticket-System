@@ -59,16 +59,20 @@ export const updateUsers = async (req, res) => {
   }
 };
 
-
-
 // get all users, only admin can get
 
-export const getAllUsers = async( req,res ) =>{
-    try {
-        const users = await User.find()
-        return res.status(StatusCodes.OK).json({success:true, message:'All Users fetched successfully', users})
-    } catch (error) {
-        console.log(
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    return res
+      .status(StatusCodes.OK)
+      .json({
+        success: true,
+        message: "All Users fetched successfully",
+        users,
+      });
+  } catch (error) {
+    console.log(
       chalk.bgRedBright(
         "Error in getAllUsers by admin in admin.controller.js ---->> ",
         error
@@ -79,5 +83,5 @@ export const getAllUsers = async( req,res ) =>{
       message: "Internal Server Error !!",
       error: "Error in getAllUsers in admin.controller.js",
     });
-    }
-}
+  }
+};

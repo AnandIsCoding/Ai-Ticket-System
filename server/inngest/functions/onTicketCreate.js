@@ -1,87 +1,79 @@
-import { Inngest, NonRetriableError } from "inngest";
-
-import ticketAssignedEmail from "../../mail/templates/ticketAssignedEmail.js";
+import mongoose from "mongoose";
+import { inngest } from "../client.js";
 import Ticket from "../../models/ticket.model.js";
 import User from "../../models/user.model.js";
-import analyzeTicket from "../../utils/aiAgent.utils";
+import { NonRetriableError } from "inngest";
 import mailSender from "../../utils/mailSender.utils.js";
+import ticketAssignedEmail from "../../mail/templates/ticketAssignedEmail.js";
+import { DATABASE_URI } from "../../configs/server.config.js";
 
-export const onTicketCreated = Inngest.createFunction(
-  { id: "on-ticket-created", retries: 2 },
+export const onTicketCreated = inngest.createFunction(
+  { id: "on-ticket-created", retries: 4 },
   { event: "ticket/created" },
   async ({ event, step }) => {
     try {
+      // 1️⃣ Ensure MongoDB connection
+      if (mongoose.connection.readyState === 0) {
+        await mongoose.connect(DATABASE_URI, {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        });
+        console.log("Inngest function connected to MongoDB ✅");
+      }
+
       const { ticketId } = event.data;
 
-      //fetch ticket from DB
+      console.log("Hi Hi Hi Hi Hi");
+
+      // 2️⃣ Fetch the ticket
       const ticket = await step.run("fetch-ticket", async () => {
         const ticketObject = await Ticket.findById(ticketId);
-        if (!ticket) {
+        if (!ticketObject) {
+          console.error("Ticket not found for ID:", ticketId);
           throw new NonRetriableError("Ticket not found");
         }
+        console.log("Fetched ticket:", ticketObject.title);
         return ticketObject;
       });
 
-      await step.run("update-ticket-status", async () => {
-        await Ticket.findByIdAndUpdate(ticket._id, { status: "Todo" });
-      });
-
-      const aiResponse = await analyzeTicket(ticket);
-
-      const relatedskills = await step.run("ai-processing", async () => {
-        let skills = [];
-        if (aiResponse) {
-          await Ticket.findByIdAndUpdate(ticket._id, {
-            priority: !["low", "medium", "high"].includes(
-              aiResponse.priority.toLowerCase()
-            )
-              ? "medium"
-              : aiResponse.priority.toLowerCase(),
-            helpfulNotes: aiResponse.helpfulNotes,
-            status: "IN_PROGRESS",
-            relatedSkills: aiResponse.relatedSkills,
-          });
-          skills = aiResponse.relatedSkills;
-        }
-        return skills;
-      });
-
+      // 3️⃣ Assign moderator/admin
       const moderator = await step.run("assign-moderator", async () => {
-        let user = await User.findOne({
-          role: "moderator",
-          skills: {
-            $elemMatch: {
-              $regex: relatedskills.join("|"),
-              $options: "i",
-            },
-          },
-        });
-        if (!user) {
-          user = await User.findOne({
-            role: "admin",
-          });
-        }
-        await Ticket.findByIdAndUpdate(ticket._id, {
-          assignedTo: user?._id || null,
-        });
-        return user;
-      });
+  console.log("Running assign-moderator step");
+  let user =
+    (await User.findOne({ role: "moderator" })) ||
+    (await User.findOne({ role: "admin" }));
 
-      await step.run("send-email-notification", async () => {
-        if (moderator) {
-          const finalTicket = await Ticket.findById(ticket._id);
-          await mailSender(
-            moderator.email,
-            `A new Ticket is assigned to you ${finalTicket.title}`,
-            ticketAssignedEmail(moderator.email, finalTicket.title)
-          );
-        }
+  if (!user) {
+    console.error("No admin or moderator found!");
+    throw new NonRetriableError("No admin or moderator found");
+  }
+
+  const updatedTicket = await Ticket.findByIdAndUpdate(
+    ticket._id,
+    { assignedTo: user._id, status: "IN_PROGRESS" },
+    { new: true }
+  );
+
+  console.log("Ticket updated:", updatedTicket);
+  return user;
+});
+
+
+      // 4️⃣ Send email notification
+      await step.run("send-email", async () => {
+        if (!moderator) return;
+        const finalTicket = await Ticket.findById(ticket._id);
+        await mailSender(
+          moderator.email,
+          `New Ticket Assigned: ${finalTicket.title}`,
+          ticketAssignedEmail(moderator.email, finalTicket.title)
+        );
+        console.log("Email sent to:", moderator.email);
       });
 
       return { success: true };
-    } catch (error) {
-      // handle error ❌
-      console.error("❌ Error running the step", error.message);
+    } catch (err) {
+      console.error("❌ Inngest Function Error:", err);
       return { success: false };
     }
   }

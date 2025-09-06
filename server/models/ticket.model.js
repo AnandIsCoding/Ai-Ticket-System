@@ -8,8 +8,7 @@ const ticketSchema = new Schema(
     },
     description: {
       type: String,
-      required: true,
-      minlength: 300, // correct lowercase
+      required: true
     },
     status: {
       type: String,

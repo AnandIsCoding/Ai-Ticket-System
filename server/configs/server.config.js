@@ -11,3 +11,5 @@ export const MAIL_PORT = process.env.MAIL_PORT
 export const SECRET_KEY = process.env.SECRET_KEY
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
+export const INNGEST_EVENT_KEY = process.env.INNGEST_EVENT_KEY
+

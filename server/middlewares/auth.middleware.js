@@ -1,14 +1,14 @@
 import chalk from "chalk";
-import {StatusCodes} from 'http-status-codes';
+import { StatusCodes } from "http-status-codes";
 import jwt from "jsonwebtoken";
 
-import {SECRET_KEY} from '../configs/server.config.js'
+import { SECRET_KEY } from "../configs/server.config.js";
 
 // Auth
 export const isAuthenticatedUser = async (req, res, next) => {
   try {
     //extract token
-    const {userToken} = req.cookies
+    const { userToken } = req.cookies;
 
     // if token not available
     if (!userToken)
@@ -23,7 +23,6 @@ export const isAuthenticatedUser = async (req, res, next) => {
       const decodedData = jwt.verify(userToken, SECRET_KEY);
       const { _id, role } = decodedData;
       req.user = { userId: _id, role };
-
     } catch (error) {
       console.log(
         "Error in decodingjwt in authenticationMiddleware ----> ",
@@ -56,7 +55,7 @@ export const isAuthenticatedUser = async (req, res, next) => {
 
 export const isAdmin = async (req, res, next) => {
   try {
-    const {role } = req.user;
+    const { role } = req.user;
     if (role !== "admin") {
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,

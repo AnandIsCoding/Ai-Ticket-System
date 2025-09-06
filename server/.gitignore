@@ -73,3 +73,5 @@ pids/
 
 # --- Optional: TypeScript ---
 *.tsbuildinfo
+
+.env
