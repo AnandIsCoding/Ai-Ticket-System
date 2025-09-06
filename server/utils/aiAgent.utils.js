@@ -1,5 +1,4 @@
 import { createAgent, gemini } from "@inngest/agent-kit";
-
 import { GEMINI_API_KEY } from "../configs/server.config.js";
 
 const analyzeTicket = async (ticket) => {
@@ -9,7 +8,7 @@ const analyzeTicket = async (ticket) => {
       apiKey: GEMINI_API_KEY,
     }),
     name: "AI Ticket Triage Assistant",
-    system: `You are an expert AI assistant that processes technical support tickets. 
+    system: `You are an expert AI assistant that processes technical support tickets.
 
 Your job is to:
 1. Summarize the issue.
@@ -18,49 +17,47 @@ Your job is to:
 4. List relevant technical skills required.
 
 IMPORTANT:
-- Respond with *only* valid raw JSON.
-- Do NOT include markdown, code fences, comments, or any extra formatting.
-- The format must be a raw JSON object.
-
-Repeat: Do not wrap your output in markdown or code fences.`,
+- Respond with only valid raw JSON.
+- Do NOT include markdown, code fences, comments, or extra formatting.
+- The format must be a raw JSON object.`
   });
 
-  const response =
-    await supportAgent.run(`You are a ticket triage agent. Only return a strict JSON object with no extra text, headers, or markdown.
-        
-Analyze the following support ticket and provide a JSON object with:
+  // Prompt the AI to analyze the ticket
+  const response = await supportAgent.run(`
+Analyze the following ticket and return only a strict JSON object with:
+- summary (1-2 sentences)
+- priority ("Low", "Medium", or "High")
+- helpfulNotes (technical guidance)
+- relatedSkills (array of relevant skills)
 
-- summary: A short 1-2 sentence summary of the issue.
-- priority: One of "Low", "Medium", or "High".
-- helpfulNotes: A detailed technical explanation that a moderator can use to solve this issue. Include useful external links or resources if possible.
-- relatedSkills: An array of relevant skills required to solve the issue (e.g., ["React", "MongoDB"]).
+Ticket:
+Title: ${ticket.title}
+Description: ${ticket.description}
+`);
 
-Respond ONLY in this JSON format and do not include any other text or markdown in the answer:
+  
+  // console.log("Full AI response:", JSON.stringify(response, null, 2));
 
-{
-"summary": "Short summary of the ticket",
-"priority": "high",
-"helpfulNotes": "Here are useful tips...",
-"relatedSkills": ["React", "Node.js"]
+  // Extract raw text from multiple possible fields
+  const output = response?.output?.[0];
+const raw = output?.content || ""; // content is already a string
+
+
+  if (!raw) {
+  console.log("AI returned empty response");
+  return null;
 }
 
----
+try {
+  const cleaned = raw.replace(/```json\s*|```/gi, "").trim();
+  const parsed = JSON.parse(cleaned);
+  return parsed;
+} catch (err) {
+  console.log("Failed to parse AI JSON:", err.message);
+  console.log("Raw AI output:", raw);
+  return null;
+}
 
-Ticket information:
-
-- Title: ${ticket.title}
-- Description: ${ticket.description}`);
-
-  const raw = response.output[0].context;
-
-  try {
-    const match = raw.match(/```json\s*([\s\S]*?)\s*```/i);
-    const jsonString = match ? match[1] : raw.trim();
-    return JSON.parse(jsonString);
-  } catch (e) {
-    console.log("Failed to parse JSON from AI response" + e.message);
-    return null; 
-  }
 };
 
-export default analyzeTicket
+export default analyzeTicket;

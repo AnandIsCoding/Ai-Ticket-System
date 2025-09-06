@@ -1,11 +1,12 @@
-import React from 'react';
-import { useLogoutHandler } from '../utils/logoutHandler';
+import React from "react";
+
+import { useLogoutHandler } from "../utils/logoutHandler";
 
 function Navbar({ user, setUser }) {
   const logout = useLogoutHandler(setUser);
 
   return (
-    <div className="navbar bg-base-100 shadow-sm px-4">
+    <div className="navbar bg-base-100 shadow-sm px-4 fixed top-0">
       <div className="flex-1">
         <a className="btn btn-ghost text-xl">Ticket 🎫</a>
       </div>
@@ -13,13 +14,11 @@ function Navbar({ user, setUser }) {
       <div className="flex-none flex items-center gap-3">
         {/* Show user role */}
         {user?.role && (
-          <div className='flex gap-4'>
+          <div className="flex gap-4">
             <span className="text-white font-medium inline">
-            {user.fullName}
-          </span>
-          <span className="text-white font-medium inline">
-            {user.role}
-          </span>
+              {user.fullName}
+            </span>
+            <span className="text-white font-medium inline">{user.role}</span>
           </div>
         )}
 

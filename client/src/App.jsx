@@ -1,15 +1,16 @@
+import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { Route, Routes } from "react-router-dom";
 
 import TermsAndConditions from "../src/pages/TermsAndConditions";
+import Admin from "./pages/Admin";
+import AllUsers from "./pages/AllUsers";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Admin from "./pages/Admin";
-import ProtectedRoute from "./utils/ProtectedRoute";
-import CheckAdmin from "./utils/CheckAdmin";
 import TicketDetails from "./pages/TicketDetails";
-import axios from "axios";
+import CheckAdmin from "./utils/CheckAdmin";
+import ProtectedRoute from "./utils/ProtectedRoute";
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
@@ -27,11 +28,10 @@ function App() {
       });
       const { data } = res; // return or use data as needed
       if (data.success) {
-        console.log(data.user)
         setUser(data?.user);
-        setIsCheckingAuth(false)
-        setIsauthenticated(true)
-        setIsadmin(data?.user?.role === 'admin')      
+        setIsCheckingAuth(false);
+        setIsauthenticated(true);
+        setIsadmin(data?.user?.role === "admin");
       }
     } catch (error) {
       console.error("Error in fetchProfile in App.jsx --->>", error);
@@ -51,7 +51,7 @@ function App() {
 
   if (isCheckingAuth) {
     return (
-      <div className="fixed inset-0 bg-white flex justify-center items-center z-[9999]">
+      <div className="fixed inset-0 bg-black flex justify-center items-center z-[9999]">
         <span className="loading loading-spinner text-primary"></span>
         <span className="loading loading-spinner text-secondary"></span>
         <span className="loading loading-spinner text-success"></span>
@@ -100,6 +100,15 @@ function App() {
           element={
             <CheckAdmin isAdmin={isAdmin}>
               <Admin user={user} setUser={setUser} />
+            </CheckAdmin>
+          }
+        />
+
+        <Route
+          path="/admin/allusers"
+          element={
+            <CheckAdmin isAdmin={isAdmin}>
+              <AllUsers user={user} setUser={setUser} />
             </CheckAdmin>
           }
         />

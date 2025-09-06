@@ -6,13 +6,13 @@ import { NonRetriableError } from "inngest";
 import mailSender from "../../utils/mailSender.utils.js";
 import ticketAssignedEmail from "../../mail/templates/ticketAssignedEmail.js";
 import { DATABASE_URI } from "../../configs/server.config.js";
+import analyzeTicket from "../../utils/aiAgent.utils.js";
 
 export const onTicketCreated = inngest.createFunction(
   { id: "on-ticket-created", retries: 4 },
   { event: "ticket/created" },
   async ({ event, step }) => {
     try {
-      // 1️⃣ Ensure MongoDB connection
       if (mongoose.connection.readyState === 0) {
         await mongoose.connect(DATABASE_URI, {
           useNewUrlParser: true,
@@ -23,50 +23,48 @@ export const onTicketCreated = inngest.createFunction(
 
       const { ticketId } = event.data;
 
-      console.log("Hi Hi Hi Hi Hi");
-
-      // 2️⃣ Fetch the ticket
+      // fetch ticket
       const ticket = await step.run("fetch-ticket", async () => {
-        const ticketObject = await Ticket.findById(ticketId);
-        if (!ticketObject) {
-          console.error("Ticket not found for ID:", ticketId);
-          throw new NonRetriableError("Ticket not found");
-        }
-        console.log("Fetched ticket:", ticketObject.title);
-        return ticketObject;
+        const t = await Ticket.findById(ticketId);
+        if (!t) throw new NonRetriableError("Ticket not found");
+        return t;
       });
 
-      // 3️⃣ Assign moderator/admin
+      // AI analysis
+      const aiResponse = await analyzeTicket(ticket);
+
+      // pick moderator/admin
       const moderator = await step.run("assign-moderator", async () => {
-  console.log("Running assign-moderator step");
-  let user =
-    (await User.findOne({ role: "moderator" })) ||
-    (await User.findOne({ role: "admin" }));
+        let user =
+          (await User.findOne({ role: "moderator" })) ||
+          (await User.findOne({ role: "admin" }));
+        if (!user) throw new NonRetriableError("No admin or moderator found");
+        return user;
+      });
 
-  if (!user) {
-    console.error("No admin or moderator found!");
-    throw new NonRetriableError("No admin or moderator found");
-  }
+      // update ticket with AI fields + assignedTo
+      const updatedTicket = await Ticket.findByIdAndUpdate(
+  ticket._id,
+  {
+    priority: aiResponse?.priority?.toLowerCase?.() || "medium",
+    helpfulNotes: aiResponse?.helpfulNotes || "",
+    relatedSkills: Array.isArray(aiResponse?.relatedSkills)
+      ? aiResponse.relatedSkills
+      : [],
+    status: "In Progress", // must match schema enum
+    assignedTo: moderator._id,
+  },
+  { new: true }
+);
 
-  const updatedTicket = await Ticket.findByIdAndUpdate(
-    ticket._id,
-    { assignedTo: user._id, status: "IN_PROGRESS" },
-    { new: true }
-  );
+      // console.log("Ticket updated in DB:", updatedTicket);
 
-  console.log("Ticket updated:", updatedTicket);
-  return user;
-});
-
-
-      // 4️⃣ Send email notification
+      // send email
       await step.run("send-email", async () => {
-        if (!moderator) return;
-        const finalTicket = await Ticket.findById(ticket._id);
         await mailSender(
           moderator.email,
-          `New Ticket Assigned: ${finalTicket.title}`,
-          ticketAssignedEmail(moderator.email, finalTicket.title)
+          `New Ticket Assigned: ${updatedTicket.title}`,
+          ticketAssignedEmail(moderator.email, updatedTicket.title)
         );
         console.log("Email sent to:", moderator.email);
       });

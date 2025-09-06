@@ -23,7 +23,7 @@ export const createTicket = async (req, res) => {
       relatedSkills: [],
     });
 
-    console.log("Ticket created:", newTicket);
+    // console.log("Ticket created:", newTicket);
 
     // Send event to Inngest
     await inngest.send({

@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+
 import GoogleLoginComponent from "../components/GoogleLoginComponent";
 
 function Home({ isAuthenticated, isAdmin, setIsauthenticated, setIsadmin, setUser }) {

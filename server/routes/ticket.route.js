@@ -11,8 +11,10 @@ const ticketRouter = express.Router();
 
 ticketRouter.post("/create", isAuthenticatedUser, createTicket);
 
+ticketRouter.get("/allticket", isAuthenticatedUser, getAllTickets);
+
 ticketRouter.get("/:id", isAuthenticatedUser, getTicket);
 
-ticketRouter.get("/allticket", isAuthenticatedUser, getAllTickets);
+
 
 export default ticketRouter;
