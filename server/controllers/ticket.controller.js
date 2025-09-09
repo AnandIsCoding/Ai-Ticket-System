@@ -1,5 +1,7 @@
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
+import mongoose from "mongoose";
+
 import { inngest } from "../inngest/client.js";
 import Ticket from "../models/ticket.model.js";
 
@@ -14,27 +16,36 @@ export const createTicket = async (req, res) => {
       });
     }
 
+    // ✅ Create ticket
     const newTicket = await Ticket.create({
       title,
       description,
-      createdBy: req.user.userId,
+      createdBy: req.user.userId, // Mongoose auto-casts string -> ObjectId
       status: "Todo",
       priority: "medium",
       relatedSkills: [],
     });
 
-    // console.log("Ticket created:", newTicket);
+    console.log("Ticket created:", newTicket._id);
+    console.log("Sending Inngest event...");
 
-    // Send event to Inngest
-    await inngest.send({
-      name: "ticket/created", // ← add slash here
-      data: {
-        ticketId: newTicket._id,
-        title,
-        description,
-        createdBy: req.user.userId,
+    // ✅ Send Inngest event to production
+    await inngest.send(
+      {
+        name: "ticket/created",
+        data: {
+          ticketId: newTicket._id.toString(),
+          title,
+          description,
+          createdBy: req.user.userId,
+        },
       },
-    });
+      {
+        url: "https://ai-ticket-system-server.vercel.app/api/v1/inngest",
+      }
+    );
+
+    console.log("✅ Inngest event sent!");
 
     return res.status(StatusCodes.OK).json({
       success: true,

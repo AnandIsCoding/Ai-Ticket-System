@@ -9,10 +9,8 @@ import { useLogoutHandler } from "../utils/logoutHandler";
 const baseUrl = import.meta.env.VITE_BASE_URL;
 
 function Dashboard({ setUser, user }) {
-  const [title, setTitle] = useState("Access Denied to Shared Drive");
-  const [description, setDescription] = useState(
-    `I'm unable to access the 'Marketing_Assets' folder on the shared drive. When I try to open it, I get an "Access Denied" error message. My colleagues in the marketing department have access. Please grant me the necessary permissions.`
-  );
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
 
   const [allTickets, setAllTickets] = useState([]);
   const navigate = useNavigate()

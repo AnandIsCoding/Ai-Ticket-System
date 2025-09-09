@@ -1,4 +1,5 @@
 import { createAgent, gemini } from "@inngest/agent-kit";
+
 import { GEMINI_API_KEY } from "../configs/server.config.js";
 
 const analyzeTicket = async (ticket) => {
@@ -36,7 +37,7 @@ Description: ${ticket.description}
 `);
 
   
-  // console.log("Full AI response:", JSON.stringify(response, null, 2));
+  console.log("Full AI response:", JSON.stringify(response, null, 2));
 
   // Extract raw text from multiple possible fields
   const output = response?.output?.[0];
